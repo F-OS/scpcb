@@ -1826,7 +1826,7 @@ Function UpdateEvents()
 			Case "lockroom173"
 				;[Block]
 				If e\room\dist < 6.0  And e\room\dist > 0 Then
-					If Curr173\Idle = 2 Then
+					If Curr173\Idle > 1 Then
 						RemoveEvent(e)
 					Else
 						If (Not EntityInView(Curr173\Collider, Camera)) Or EntityDistance(Curr173\Collider, Collider)>15.0 Then 
@@ -2008,7 +2008,7 @@ Function UpdateEvents()
 								ElseIf dist < 8.0
 									e\SoundCHN = LoopSound2(e\Sound, e\SoundCHN, Camera, e\room\Objects[20], 8.0)
 									EntityTexture e\room\Objects[20], e\room\Objects[19]
-									Injuries=Injuries+(8.0-dist)*FPSfactor*0.001
+									Injuries=Injuries+(8.0-dist)*FPSfactor*0.0003
 									
 									If dist<7.0 Then 
 										pvt% = CreatePivot()
@@ -2417,8 +2417,21 @@ Function UpdateEvents()
 											EndIf
 										EndIf
 									Next
-									Using294=temp
-									If Using294 Then MouseHit1=False
+									If SelectedItem<>Null Then
+										If SelectedItem\itemtemplate\tempname="50ct" Then
+											RemoveItem(SelectedItem)
+											SelectedItem=Null
+											e\EventState2 = 1
+										EndIf
+									EndIf
+									If e\EventState2 = 1 Then
+										Using294=temp
+										If Using294 Then MouseHit1=False
+									Else
+										Using294=False
+										Msg = "You need to insert a 50 cent coin in order to use this machine."
+										MsgTimer = 70*5
+									EndIf
 								EndIf
 							EndIf
 						EndIf
@@ -2687,6 +2700,7 @@ Function UpdateEvents()
 					
 					If e\EventState = 0 Then
 						If e\room\dist < 8 Then
+							HideEntity e\room\Objects[3]
 							If (MilliSecs2() Mod 1500) < 800 Then
 								ShowEntity e\room\Objects[4]
 							Else
@@ -6275,10 +6289,12 @@ Function UpdateEvents()
 							x = 2.0
 						EndIf
 						
-						CameraClsColor Camera,98*x,133*x,162*x
-						CameraRange Camera,RoomScale,8.5
-						CameraFogRange Camera,0.5,8.0
-						CameraFogColor Camera,98*x,133*x,162*x
+						If (Not DebugHUD)
+							CameraClsColor Camera,98*x,133*x,162*x
+							CameraRange Camera,RoomScale,8.5
+							CameraFogRange Camera,0.5,8.0
+							CameraFogColor Camera,98*x,133*x,162*x
+						EndIf
 						
 					Else
 						
@@ -6664,8 +6680,9 @@ Function UpdateEvents()
 			Case "tunnel2"
 				;[Block]
 				If PlayerRoom = e\room Then
-					If Curr173\Idle = 2 Then
+					If Curr173\Idle > 1 Then
 						RemoveEvent(e)
+						Exit
 					Else		
 						If e\EventState = 0 Then
 							If Distance(EntityX(Collider), EntityZ(Collider), EntityX(e\room\obj), EntityZ(e\room\obj)) < 3.5 Then
@@ -6674,31 +6691,32 @@ Function UpdateEvents()
 								LightBlink = Rnd(0.0,1.0)*(e\EventState/200)
 								e\EventState = 1
 							End If
-						ElseIf e\EventState < 200
-							
-							BlinkTimer = -10
-							If e\EventState > 30 Then 
-								LightBlink = 1.0 
-								If e\EventState-FPSfactor =< 30 Then 
-									PlaySound_Strict LoadTempSound("SFX\ambient\general\ambient3.ogg")
-								EndIf
-							EndIf
-							If e\EventState-FPSfactor =< 100 And e\EventState > 100 Then
-								PlaySound_Strict LoadTempSound("SFX\ambient\general\ambient6.ogg")
-								PositionEntity(Curr173\Collider, EntityX(e\room\obj), 0.6, EntityZ(e\room\obj))
-								ResetEntity(Curr173\Collider)					
-								Curr173\Idle = True		
-							EndIf
-							LightBlink = 1.0
-							e\EventState = e\EventState + FPSfactor
-						Else
-							BlinkTimer = BLINKFREQ
-							
-							Curr173\Idle = False
-							RemoveEvent(e)
 						End If	
 					EndIf
-				EndIf					
+				EndIf
+				
+				If e\EventState > 0 And e\EventState < 200 Then
+					BlinkTimer = -10
+					If e\EventState > 30 Then 
+						LightBlink = 1.0 
+						If e\EventState-FPSfactor =< 30 Then 
+							PlaySound_Strict LoadTempSound("SFX\ambient\general\ambient3.ogg")
+						EndIf
+					EndIf
+					If e\EventState-FPSfactor =< 100 And e\EventState > 100 Then
+						PlaySound_Strict LoadTempSound("SFX\ambient\general\ambient6.ogg")
+						PositionEntity(Curr173\Collider, EntityX(e\room\obj), 0.6, EntityZ(e\room\obj))
+						ResetEntity(Curr173\Collider)					
+						Curr173\Idle = True		
+					EndIf
+					LightBlink = 1.0
+					e\EventState = e\EventState + FPSfactor
+				ElseIf e\EventState <> 0 Then
+					BlinkTimer = BLINKFREQ
+					
+					Curr173\Idle = False
+					RemoveEvent(e)
+				EndIf
 				;[End Block]
 			Case "tunnel106"
 				;[Block]
@@ -7400,6 +7418,15 @@ Function UpdateEvents()
 						
 						e\EventState = 1
 					EndIf
+					
+					;WIP
+					p.Particles = CreateParticle(EntityX(e\room\Objects[0],True), EntityY(e\room\Objects[0],True), EntityZ(e\room\Objects[0],True), 6, 0.2, 0, 10)
+					p\speed = 0.01
+					RotateEntity(p\pvt, -60, e\room\angle-90, 0)
+					
+					p\Achange = -0.02
+					
+					e\SoundCHN = LoopSound2(AlarmSFX(3),e\SoundCHN,Camera,e\room\Objects[3],5)
 				EndIf
 				;[End Block]
 			Case "room2scps2"
@@ -7702,6 +7729,7 @@ Function UpdateEvents()
 							e\room\RoomDoors[1]\locked = False
 							UseDoor(e\room\RoomDoors[0])
 							UseDoor(e\room\RoomDoors[1])
+							PlaySound_Strict(AlarmSFX(4))
 						ElseIf EntityDistance(e\room\Objects[0],Collider)>2.4
 							e\EventState3 = 0.0
 						EndIf
@@ -7737,7 +7765,7 @@ Function UpdateEvents()
 									
 									FreeEntity pvt
 								EndIf
-									
+								
 							ElseIf e\EventState2 > 70*3 And e\EventState < 70*5.5
 								pvt% = CreatePivot(e\room\obj)								
 								For i = 0 To 1
@@ -8266,12 +8294,14 @@ Function UpdateEvents()
 				;[End Block]
 			Case "dimension1499"
 				;[Block]
-				;Hopefully this fixes the issue with the dimension1499 buildings appearing inside the facility
 				If PlayerRoom<>e\room
 					If e\room\Objects[0]<>0
 						For i = 1 To 15
 							HideEntity e\room\Objects[i]
 						Next
+					EndIf
+					If EntityY(Collider)>EntityY(e\room\obj)-0.5
+						PlayerRoom = e\room
 					EndIf
 				EndIf
 				If e\EventState = 2.0
@@ -8325,6 +8355,14 @@ Function UpdateEvents()
 							EndIf
 						EndIf
 					EndIf
+				EndIf
+				;[End Block]
+			Case "room1archive"
+				;[Block]
+				If e\EventState = 0
+					e\EventState = Rand(1,3)
+				Else
+					e\room\RoomDoors[0]\KeyCard = e\EventState
 				EndIf
 				;[End Block]
 		End Select
@@ -8448,6 +8486,7 @@ Function UpdateDimension1499()
 					DropSpeed = 0
 				EndIf
 				CurrStepSFX=3
+				PlayerFallingPickDistance = 0.0
 			Else
 				If e\EventState = 2.0
 					HideEntity NTF_1499Sky
@@ -9008,6 +9047,8 @@ Function UpdateEndings()
 						
 						ResetEntity Collider
 						e\EventState = 1.0
+						
+						RotateEntity Collider,0,EntityYaw(Collider)+(e\room\angle+180),0
 						
 						If (Not Contained106) Then PlaySound_Strict LoadTempSound("SFX\Ending\GateA\106Escape.ogg") 
 						

@@ -290,8 +290,8 @@ Function InitItemTemplates()
 	;.........
 	
 	;new Items in SCP:CB 1.3 - ENDSHN
-	it = CreateItemTemplate("SCP-1499","scp1499","GFX\items\SCP-1499.3ds","GFX\items\INVscp1499.jpg", "", 0.023,"GFX\items\SCP-1499.jpg") : it\sound = 2
-	it = CreateItemTemplate("SCP-1499","super1499","GFX\items\SCP-1499.3ds","GFX\items\INVscp1499.jpg", "", 0.023,"GFX\items\SCP-1499.jpg") : it\sound = 2
+	it = CreateItemTemplate("SCP-1499","scp1499","GFX\items\SCP-1499.b3d","GFX\items\INVscp1499.jpg", "", 0.023) : it\sound = 2
+	it = CreateItemTemplate("SCP-1499","super1499","GFX\items\SCP-1499.b3d","GFX\items\INVscp1499.jpg", "", 0.023) : it\sound = 2
 	CreateItemTemplate("Emily Ross' Badge", "badge", "GFX\items\badge.x", "GFX\items\INVbadge.jpg", "GFX\items\badge1.jpg", 0.0001, "GFX\items\badge1_tex.jpg")
 	it = CreateItemTemplate("Lost Key", "key", "GFX\items\key.b3d", "GFX\items\INV1162_1.jpg", "", 0.001, "GFX\items\key2.png","",0,1+2+8) : it\sound = 3
 	it = CreateItemTemplate("Disciplinary Hearing DH-S-4137-17092", "oldpaper", "GFX\items\paper.x", "GFX\items\INVpaper.jpg", "GFX\items\dh.s", 0.003) : it\sound = 0
@@ -301,6 +301,10 @@ Function InitItemTemplates()
 	it = CreateItemTemplate("Movie Ticket", "ticket", "GFX\items\key.b3d", "GFX\items\INVticket.jpg", "GFX\items\ticket.png", 0.002, "GFX\items\tickettexture.png","",0,1+2+8) : it\sound = 0
 	
 	CreateItemTemplate("Old Badge", "badge", "GFX\items\badge.x", "GFX\items\INVoldbadge.jpg", "GFX\items\badge2.png", 0.0001, "GFX\items\badge2_tex.png","",0,1+2+8)
+	
+	it = CreateItemTemplate("50 Cent Coin","50ct", "GFX\items\key.b3d", "GFX\items\INVcoin.jpg", "", 0.0005, "GFX\items\coin.png","",0,1+2+8) : it\sound = 3
+	
+	it = CreateItemTemplate("Wallet","wallet", "GFX\items\wallet.b3d", "GFX\items\INVwallet.jpg", "", 0.0005,"","",1) : it\sound = 2
 	
 	For it = Each ItemTemplates
 		If (it\tex<>0) Then
@@ -407,6 +411,9 @@ Function CreateItem.Items(name$, tempname$, x#, y#, z#, r%=0,g%=0,b%=0,a#=1.0,in
 		invSlots = 10
 		SetAnimTime i\model,17.0
 		i\invimg = i\itemtemplate\invimg2
+	ElseIf (tempname="wallet") And (invSlots=0) Then
+		invSlots = 10
+		SetAnimTime i\model,0.0
 	EndIf
 	
 	i\invSlots=invSlots
@@ -572,9 +579,18 @@ End Function
 
 Function PickItem(item.Items)
 	Local n% = 0
+	Local canpickitem = True
+	Local fullINV% = True
+	
+	For n% = 0 To MaxItemAmount - 1
+		If Inventory(n)=Null
+			fullINV = False
+			Exit
+		EndIf
+	Next
 	
 	CatchErrors("Uncaught (PickItem)")
-	If ItemAmount < MaxItemAmount Then
+	If (Not fullINV) Then
 		For n% = 0 To MaxItemAmount - 1
 			If Inventory(n) = Null Then
 				Select item\itemtemplate\tempname
@@ -631,25 +647,57 @@ Function PickItem(item.Items)
 					Case "navigator", "nav"
 						If item\itemtemplate\name = "S-NAV Navigator Ultimate" Then GiveAchievement(AchvSNAV)
 					Case "hazmatsuit", "hazmatsuit2", "hazmatsuit3"
-						Msg = "You put on the hazmat suit."
-						TakeOffStuff(1+16)
-						MsgTimer = 70 * 5
-						If item\itemtemplate\tempname="hazmatsuit3" Then
-							WearingHazmat = 3
-						ElseIf item\itemtemplate\tempname="hazmatsuit2"
-							WearingHazmat = 2
-						Else
-							WearingHazmat = 1
-						EndIf
-						
+						canpickitem = True
 						For z% = 0 To MaxItemAmount - 1
 							If Inventory(z) <> Null Then
 								If Inventory(z)\itemtemplate\tempname="hazmatsuit" Or Inventory(z)\itemtemplate\tempname="hazmatsuit2" Or Inventory(z)\itemtemplate\tempname="hazmatsuit3" Then
-									DropItem(Inventory(z))
+									canpickitem% = False
+									Exit
+								ElseIf Inventory(z)\itemtemplate\tempname="vest" Or Inventory(z)\itemtemplate\tempname="finevest" Then
+									canpickitem% = 2
+									Exit
 								EndIf
 							EndIf
 						Next
 						
+						If canpickitem=False Then
+							Msg = "You are not able to wear two hazmat suits at the same time."
+							MsgTimer = 70 * 5
+							Return
+						ElseIf canpickitem=2 Then
+							Msg = "You are not able to wear a vest and a hazmat suit at the same time."
+							MsgTimer = 70 * 5
+							Return
+						Else
+							;TakeOffStuff(1+16)
+							SelectedItem = item
+						EndIf
+					Case "vest","finevest"
+						canpickitem = True
+						For z% = 0 To MaxItemAmount - 1
+							If Inventory(z) <> Null Then
+								If Inventory(z)\itemtemplate\tempname="vest" Or Inventory(z)\itemtemplate\tempname="finevest" Then
+									canpickitem% = False
+									Exit
+								ElseIf Inventory(z)\itemtemplate\tempname="hazmatsuit" Or Inventory(z)\itemtemplate\tempname="hazmatsuit2" Or Inventory(z)\itemtemplate\tempname="hazmatsuit3" Then
+									canpickitem% = 2
+									Exit
+								EndIf
+							EndIf
+						Next
+						
+						If canpickitem=False Then
+							Msg = "You are not able to wear two vests at the same time."
+							MsgTimer = 70 * 5
+							Return
+						ElseIf canpickitem=2 Then
+							Msg = "You are not able to wear a vest and a hazmat suit at the same time."
+							MsgTimer = 70 * 5
+							Return
+						Else
+							;TakeOffStuff(2)
+							SelectedItem = item
+						EndIf
 				End Select
 				
 				If item\itemtemplate\sound <> 66 Then PlaySound_Strict(PickSFX(item\itemtemplate\sound))
@@ -671,9 +719,11 @@ Function PickItem(item.Items)
 	CatchErrors("PickItem")
 End Function
 
-Function DropItem(item.Items)
+Function DropItem(item.Items,playdropsound%=True)
 	CatchErrors("Uncaught (DropItem)")
-	If item\itemtemplate\sound <> 66 Then PlaySound_Strict(PickSFX(item\itemtemplate\sound))
+	If playdropsound Then
+		If item\itemtemplate\sound <> 66 Then PlaySound_Strict(PickSFX(item\itemtemplate\sound))
+	EndIf
 	
 	item\Dropped = 1
 	
